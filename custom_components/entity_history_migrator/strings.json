@@ -1,0 +1,167 @@
+{
+  "title": "Entity History Migrator",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Entity History Migrator",
+        "description": "The migrator uses the Home Assistant InfluxDB v2 connection.\n\n**Current connection**\n{current_connection}",
+        "data": {
+          "migration_delay_seconds": "Settling delay after rename (seconds)"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only one instance can be configured.",
+      "no_influxdb_v2": "No Home Assistant InfluxDB v2 configuration was found.",
+      "ambiguous_influxdb_v2": "More than one enabled Home Assistant InfluxDB v2 connection was found. The migrator needs a single history connection."
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to InfluxDB.",
+      "invalid_auth": "InfluxDB rejected the credentials or token.",
+      "invalid_bucket": "The selected bucket does not exist or is not readable with these credentials.",
+      "unknown": "Unexpected error while validating the InfluxDB connection.",
+      "invalid_organization": "The selected InfluxDB organization does not exist or is not accessible with these credentials."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure Entity History Migrator",
+        "description": "**Current connection**\n{current_connection}",
+        "data": {
+          "migration_delay_seconds": "Settling delay after rename (seconds)",
+          "trace_log_enabled": "Enable logging in /config/entity_history_migrator.log",
+          "create_deletion_repair": "Create a Repair issue when an entity is deleted"
+        }
+      }
+    }
+  },
+  "issues": {
+    "history_conflict": {
+      "title": "Entity history conflict: {entity_id}",
+      "description": "**Old Entity ID:** `{source_label}`  \n**New Entity ID:** `{target_label}`\n\nOld Entity History: **{source_measurements} measurements ({source_records} records) · {source_units}**  \nNew Entity History: **{unknown_target_measurements} measurements ({unknown_target_records} records) · {target_units}**",
+      "fix_flow": {
+        "abort": {
+          "already_resolved": "This conflict has already been resolved or replaced by a newer entity rename.",
+          "integration_not_loaded": "Entity History Migrator is not currently loaded."
+        },
+        "step": {
+          "init": {
+            "title": "Resolve entity history conflict",
+            "description": "**Existing history conflicts with the new entity ID**\n\n**Old Entity ID:** `{source_label}`  \n{source_measurements} measurements ({source_records} records) · {source_units}  \n{source_history}\n\n**New Entity ID:** `{target_label}`  \n{unknown_target_measurements} measurements ({unknown_target_records} records) · {target_units}  \n{target_history}\n\n**Physical quantity:** {physical_quantity}  \n**Units compatible:** {units_compatible}\n\n{merge_note}\n\n**Merge** — merge the existing New Entity History with the migrated Old Entity History.  \n**Delete** — delete the existing New Entity History and migrate the Old Entity History. **This is destructive!**  \n**Rename historical data** — preserve the New Entity History under a custom Archive Entity ID, then migrate the proven Old Entity History normally.  \n**Ignore** — leave this conflict unchanged and stop asking about it.",
+            "menu_options": {
+              "merge": "Merge",
+              "delete": "Delete",
+              "custom": "Rename historical data",
+              "ignore": "Ignore"
+            }
+          },
+          "merge": {
+            "title": "Confirm merge",
+            "description": "This will migrate **{source_measurements} measurements ({source_records} records) · {source_units}** from:\n\n`{source_label}`\n\nto:\n\n`{target_label}`\n\nand merge them with **{unknown_target_measurements} existing measurements ({unknown_target_records} records) · {target_units}** already stored under that ID.\n\n**The merged history will belong to this entity.**",
+            "menu_options": {
+              "confirm_merge": "Confirm",
+              "back_to_conflict": "← Back"
+            }
+          },
+          "delete": {
+            "title": "Confirm delete",
+            "description": "This will delete **{unknown_target_measurements} measurements ({unknown_target_records} records) · {target_units}** currently stored under:\n\n`{target_label}`\n\nand migrate **{source_measurements} measurements ({source_records} records) · {source_units}** from:\n\n`{source_label}`\n\nto:\n\n`{target_label}`\n\n**This is destructive.** Press **Confirm** to proceed.",
+            "menu_options": {
+              "confirm_delete": "Confirm",
+              "back_to_conflict": "← Back"
+            }
+          },
+          "ignore": {
+            "title": "Confirm ignore",
+            "description": "This will ignore the conflict; both histories will remain unchanged.\n\n**{source_measurements} measurements ({source_records} records) · {source_units}** under:\n\n`{source_label}`\n\n**{unknown_target_measurements} measurements ({unknown_target_records} records) · {target_units}** under:\n\n`{target_label}`",
+            "menu_options": {
+              "confirm_ignore": "Confirm",
+              "back_to_conflict": "← Back"
+            }
+          },
+          "custom": {
+            "title": "Rename historical data",
+            "description": "Archive **{unknown_target_measurements} measurements ({unknown_target_records} records) · {target_units}** currently under:\n\n`{target_label}`\n\nas the Archive Entity ID entered below.\n\nThen migrate **{source_measurements} measurements ({source_records} records) · {source_units}** from:\n\n`{source_label}`\n\nto:\n\n`{target_label}`\n\nThe archive is verified before the original target history is deleted.\n\nThe Archive Entity ID must use the same domain and must not already exist in Home Assistant or have history in the configured backend.",
+            "data": {
+              "custom_entity_id": "Archive Entity ID"
+            }
+          },
+          "confirm_custom": {
+            "title": "Confirm archive and migration",
+            "description": "This will preserve **{unknown_target_measurements} measurements ({unknown_target_records} records) · {target_units}** under the archive ID:\n\n`{custom_target_entity_id}`\n\nand migrate **{source_measurements} measurements ({source_records} records) · {source_units}** from:\n\n`{source_label}`\n\nto:\n\n`{target_label}`\n\nThe archive copy is verified before the existing target history is removed.",
+            "menu_options": {
+              "confirm_custom_target": "Confirm",
+              "back_to_custom": "← Back"
+            }
+          }
+        },
+        "error": {
+          "invalid_entity_id": "Enter a valid Home Assistant entity ID, for example sensor.pc_hydra_voltage_history.",
+          "different_domain": "The Archive Entity ID must use the same domain as the New Entity ID.",
+          "reserved_entity_id": "Choose a different Archive Entity ID. The Old and New Entity IDs, and any known timeline aliases, cannot be used as the archive target.",
+          "entity_already_exists": "That Entity ID already exists in Home Assistant. Choose an unused Archive Entity ID.",
+          "history_already_exists": "InfluxDB already contains history under that Entity ID. Choose an unused Archive Entity ID.",
+          "cannot_check_custom_target": "Could not verify that the Archive Entity ID is unused in the configured history backend. No decision was saved."
+        }
+      }
+    },
+    "entity_deleted": {
+      "title": "Entity deleted: {entity_id}",
+      "description": "`{entity_id}` was removed from the Home Assistant Entity Registry.\n\nThe migrator found **{measurement_count} historical measurements** in **{segment_count} proven ownership intervals**. The data has not been modified. Open this issue to decide whether to keep or delete the history.",
+      "fix_flow": {
+        "abort": {
+          "already_resolved": "A decision for this deletion has already been recorded.",
+          "integration_not_loaded": "Entity History Migrator is not currently loaded.",
+          "history_backend_unavailable": "The configured history database could not be queried. No decision was saved.",
+          "history_operation_failed": "The history operation could not be completed or verified. The Repair issue remains available so you can retry.",
+          "deletion_queued": "The decision is queued. This Repair closes after the worker completes it.",
+          "deletion_target_changed": "The history database changed. Reopen this Repair to review the current history.",
+          "deletion_write_disabled": "This history database currently has deletion disabled."
+        },
+        "step": {
+          "init": {
+            "title": "Resolve deleted entity history",
+            "description": "**Deleted Entity ID:** `{entity_id}`\n\nProven history: **{measurement_count} measurements ({record_count} records)** across **{segment_count} ownership intervals**.\n\n**Database history**  \n{history_details}\n\n**Proven ownership time range**  \n&nbsp;&nbsp;&nbsp;&nbsp;`{start}`  \nto  \n&nbsp;&nbsp;&nbsp;&nbsp;`{stop}`\n\nOnly history whose ownership is proven by the migrator is included. Unknown or archived history is left untouched.\n\nChoose whether to permanently delete this proven history or keep it and record that decision.",
+            "menu_options": {
+              "delete_history": "Delete historical data",
+              "keep_history": "Keep historical data"
+            }
+          },
+          "delete_history": {
+            "title": "Confirm deletion of historical data",
+            "description": "This will permanently delete **{measurement_count} measurements ({record_count} records)** across **{segment_count} proven intervals** for:\n\n`{entity_id}`\n\nProven history spans `{start}` to `{stop}`. Unknown or archived history is not included.\n\n**This is destructive.** Press **Confirm** to proceed.",
+            "menu_options": {
+              "confirm_delete_history": "Confirm",
+              "back_to_deletion": "← Back"
+            }
+          },
+          "deletion_review": {
+            "title": "Resolve deleted entity history",
+            "description": "The history changed after approval. Review the current scope before submitting a new decision.\n\n**Deleted Entity ID:** `{entity_id}`\n\nProven history: **{measurement_count} measurements ({record_count} records)** across **{segment_count} ownership intervals**.\n\n**Database history**  \n{history_details}\n\n**Proven ownership time range**  \n&nbsp;&nbsp;&nbsp;&nbsp;`{start}`  \nto  \n&nbsp;&nbsp;&nbsp;&nbsp;`{stop}`\n\nOnly history whose ownership is proven by the migrator is included. Unknown or archived history is left untouched.\n\nChoose whether to permanently delete this proven history or keep it and record that decision.",
+            "menu_options": {
+              "delete_history": "Delete historical data",
+              "keep_history": "Keep historical data"
+            }
+          },
+          "deletion_failed": {
+            "title": "Resolve deleted entity history",
+            "description": "The worker could not complete the previous decision. Review the remaining history before retrying.\n\n**Deleted Entity ID:** `{entity_id}`\n\nProven history: **{measurement_count} measurements ({record_count} records)** across **{segment_count} ownership intervals**.\n\n**Database history**  \n{history_details}\n\n**Proven ownership time range**  \n&nbsp;&nbsp;&nbsp;&nbsp;`{start}`  \nto  \n&nbsp;&nbsp;&nbsp;&nbsp;`{stop}`\n\nOnly history whose ownership is proven by the migrator is included. Unknown or archived history is left untouched.\n\nChoose whether to permanently delete this proven history or keep it and record that decision.",
+            "menu_options": {
+              "delete_history": "Delete historical data",
+              "keep_history": "Keep historical data"
+            }
+          },
+          "keep_history": {
+            "title": "Confirm keeping historical data",
+            "description": "This will keep **{measurement_count} measurements ({record_count} records)** across **{segment_count} proven intervals** for:\n\n`{entity_id}`\n\nProven history spans `{start}` to `{stop}`.\n\nNo history will be deleted. This decision will be recorded.",
+            "menu_options": {
+              "confirm_keep_history": "Confirm",
+              "back_to_deletion": "← Back"
+            }
+          }
+        }
+      }
+    }
+  }
+}
