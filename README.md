@@ -100,4 +100,5 @@ Orphanik is a proposed future, separate orphan-detection process. It is not impl
 
 ## License
 
-No license has been selected yet. Until a license is added, the source remains subject to the default copyright rules; public visibility does not by itself grant permission to reuse or redistribute it.
+Copyright 2026 Jiri Kosar, Licensed under the Apache License, Version 2.0.
+
